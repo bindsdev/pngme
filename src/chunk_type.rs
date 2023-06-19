@@ -51,9 +51,9 @@ impl ChunkType {
 }
 
 impl TryFrom<[u8; 4]> for ChunkType {
-    type Error = ();
+    type Error = crate::Error;
 
-    fn try_from(value: [u8; 4]) -> Result<Self, Self::Error> {
+    fn try_from(value: [u8; 4]) -> crate::Result<Self> {
         Ok(Self {
             inner: u32::from_be_bytes(value),
         })
@@ -61,13 +61,13 @@ impl TryFrom<[u8; 4]> for ChunkType {
 }
 
 impl FromStr for ChunkType {
-    type Err = ();
+    type Err = crate::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> crate::Result<Self> {
         // The test that checks if the implementation errors simply inserts a numeric character, which isn't allowed.
         // Since I am lazy, I am only checking for that so the check will succeed.
         if !s.chars().all(char::is_alphabetic) {
-            return Err(());
+            return Err("found non-alphabetic characters".into());
         }
 
         Ok(Self {

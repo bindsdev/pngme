@@ -2,6 +2,7 @@ use crate::chunk_type::ChunkType;
 use std::{
     convert::TryFrom,
     fmt::{self, Display, Formatter},
+    io::{BufReader, Cursor, Read, Seek, SeekFrom}
 };
 
 #[derive(Debug)]
@@ -32,16 +33,34 @@ impl Chunk {
     }
 
     fn data_as_string(&self) -> crate::Result<String> {
-        Ok(String::from_utf8(self.data().to_vec())?)
+        let data = self.data();
+
+        let mut reader = BufReader::new(&data[4..(data.len() - 4)]);
+        let mut data_str_bytes = Vec::new();
+        reader.read_to_end(&mut data_str_bytes)?;
+
+        Ok(String::from_utf8(data_str_bytes)?)
     }
 }
 
 impl TryFrom<&[u8]> for Chunk {
-    type Error = ();
+    type Error = crate::Error;
 
-    #[allow(unused_variables)]
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        todo!()
+    fn try_from(value: &[u8]) -> crate::Result<Self> {
+        let mut reader = BufReader::new(Cursor::new(value));
+
+        let mut ctype_buf: [u8; 4] = [0, 0, 0, 0];
+        reader.seek(SeekFrom::Start(4))?;
+        reader.read_exact(&mut ctype_buf)?;
+        let ctype = ChunkType::try_from(ctype_buf)?;
+
+        reader.rewind()?;
+
+        let cdata_handle = &mut value[..4].chain(&value[8..]);
+        let mut cdata = Vec::new();
+        cdata_handle.read_to_end(&mut cdata)?;
+
+        Ok(Self { ctype, cdata })
     }
 }
 

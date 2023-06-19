@@ -6,9 +6,8 @@ mod chunk_type;
 mod commands;
 mod png;
 
-use std::error::Error;
-
-type Result<T> = std::result::Result<T, Box<dyn Error>>;
+type Error = Box<dyn std::error::Error>;
+type Result<T> = std::result::Result<T, Error>;
 
 fn main() -> Result<()> {
     Ok(())
