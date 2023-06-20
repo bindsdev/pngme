@@ -1,8 +1,9 @@
 use crate::chunk_type::ChunkType;
+use crc::{Crc, CRC_32_ISO_HDLC};
 use std::{
     convert::TryFrom,
     fmt::{self, Display, Formatter},
-    io::{BufReader, Cursor, Read, Seek, SeekFrom}
+    io::{BufReader, Cursor, Read, Seek, SeekFrom},
 };
 
 #[derive(Debug)]
@@ -17,7 +18,7 @@ impl Chunk {
     }
 
     fn length(&self) -> u32 {
-        todo!();
+        self.data().len() as u32
     }
 
     fn chunk_type(&self) -> &ChunkType {
@@ -29,17 +30,13 @@ impl Chunk {
     }
 
     fn crc(&self) -> u32 {
-        todo!();
+        let crc = Crc::<u32>::new(&CRC_32_ISO_HDLC);
+        let td_bytes = [self.chunk_type().bytes().as_slice(), self.data()].concat();
+        crc.checksum(td_bytes.as_ref())
     }
 
     fn data_as_string(&self) -> crate::Result<String> {
-        let data = self.data();
-
-        let mut reader = BufReader::new(&data[4..(data.len() - 4)]);
-        let mut data_str_bytes = Vec::new();
-        reader.read_to_end(&mut data_str_bytes)?;
-
-        Ok(String::from_utf8(data_str_bytes)?)
+        Ok(String::from_utf8(self.data().to_vec())?)
     }
 }
 
@@ -56,11 +53,21 @@ impl TryFrom<&[u8]> for Chunk {
 
         reader.rewind()?;
 
-        let cdata_handle = &mut value[..4].chain(&value[8..]);
+        let cdata_handle = &mut &value[8..value.len() - 4];
         let mut cdata = Vec::new();
         cdata_handle.read_to_end(&mut cdata)?;
 
-        Ok(Self { ctype, cdata })
+        let mut crc_buf: [u8; 4] = [0, 0, 0, 0];
+        reader.seek(SeekFrom::End(-4))?;
+        reader.read_exact(&mut crc_buf)?;
+        let crc = Crc::<u32>::new(&CRC_32_ISO_HDLC);
+        let td_bytes = [ctype_buf.as_slice(), cdata.as_slice()].concat();
+
+        if crc.checksum(td_bytes.as_ref()) != u32::from_be_bytes(crc_buf) {
+            return Err("crc does not match".into());
+        }
+
+        Ok(Chunk::new(ctype, cdata))
     }
 }
 

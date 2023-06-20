@@ -1,6 +1,7 @@
 use std::{
     convert::TryFrom,
     fmt::{self, Display, Formatter},
+    io::{BufReader, Read},
     str::{self, FromStr},
 };
 
@@ -14,7 +15,7 @@ fn fifth_bit_check(byte: u8, set: bool) -> bool {
 }
 
 impl ChunkType {
-    fn bytes(&self) -> [u8; 4] {
+    pub fn bytes(&self) -> [u8; 4] {
         self.inner.to_be_bytes()
     }
 
@@ -70,9 +71,11 @@ impl FromStr for ChunkType {
             return Err("found non-alphabetic characters".into());
         }
 
-        Ok(Self {
-            inner: u32::from_be_bytes(s.as_bytes().try_into().unwrap()),
-        })
+        let mut reader = BufReader::new(s.as_bytes());
+        let mut buf: [u8; 4] = [0, 0, 0, 0];
+        reader.read_exact(&mut buf)?;
+
+        Self::try_from(buf)
     }
 }
 
@@ -81,7 +84,7 @@ impl Display for ChunkType {
         write!(
             f,
             "{}",
-            str::from_utf8(&self.inner.to_be_bytes()).map_err(|_| fmt::Error)?
+            str::from_utf8(self.inner.to_be_bytes().as_slice()).map_err(|_| fmt::Error)?
         )
     }
 }
