@@ -1,14 +1,23 @@
 #![allow(dead_code)]
 
-mod args;
 mod chunk;
 mod chunk_type;
-mod commands;
+mod cli;
 mod png;
 
 type Error = Box<dyn std::error::Error>;
 type Result<T> = std::result::Result<T, Error>;
 
+use clap::Parser;
+use cli::{Cli, Subcommand};
+
 fn main() -> Result<()> {
-    Ok(())
+    let args = Cli::parse();
+
+    match args.subcommand {
+        Subcommand::Encode(args) => cli::encode(args),
+        Subcommand::Decode(args) => cli::decode(args),
+        Subcommand::Remove(args) => cli::remove(args),
+        Subcommand::Print(args) => cli::print(args),
+    }
 }

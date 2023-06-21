@@ -7,13 +7,13 @@ use std::{
 };
 
 #[derive(Debug)]
-struct Chunk {
+pub struct Chunk {
     ctype: ChunkType,
     cdata: Vec<u8>,
 }
 
 impl Chunk {
-    fn new(ctype: ChunkType, cdata: Vec<u8>) -> Self {
+    pub fn new(ctype: ChunkType, cdata: Vec<u8>) -> Self {
         Self { ctype, cdata }
     }
 
@@ -21,7 +21,7 @@ impl Chunk {
         self.data().len() as u32
     }
 
-    fn chunk_type(&self) -> &ChunkType {
+    pub fn chunk_type(&self) -> &ChunkType {
         &self.ctype
     }
 
@@ -35,8 +35,12 @@ impl Chunk {
         crc.checksum(td_bytes.as_ref())
     }
 
-    fn data_as_string(&self) -> crate::Result<String> {
+    pub fn data_as_string(&self) -> crate::Result<String> {
         Ok(String::from_utf8(self.data().to_vec())?)
+    }
+
+    pub fn as_bytes(&self) -> Vec<u8> {
+        [self.chunk_type().bytes().as_slice(), self.data()].concat()
     }
 }
 
